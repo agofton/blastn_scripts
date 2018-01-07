@@ -1,0 +1,37 @@
+#!/bin/bash
+
+    #1 perform blast against cutom Borrelia DB to rapidly remove non-Borrelia hits
+
+nohup blastn -task megablast /
+-query /data/SPAdes-contigs/uniq_contigs_SPAdes.fasta /
+-db /data/blast-borrelia-db/borrelia-blast-db /
+-num_threads 15 /
+-max_target_seqs 10 /
+-outfmt 6 /
+-out /data/SPAdes-contigs/uniq_contigs_SPAdes_1st-pass-out.txt &
+
+    #2 get Borrelia hits in .fasta format for 2nd blast againt nt db
+
+awk '{print $1}' uniq_contigs_SPAdes_1st-pass-out.txt > uniq_contigs_SPAdes_1st-pass-seqIDs.txt
+
+usearch9.2 -fastx_getseqs uniq_contigs_SPAdes_1st-pass-out.txt /
+-labels uniq_contigs_SPAdes_1st-pass-seqIDs.txt /
+-fastaout uniq_contigs_SPAdes_1st-pass-out.fasta
+
+    #3 perform blast again nt db
+
+nohup blastn -task megablast /
+-query /data/SPAdes-contigs/uniq_contigs_SPAdes_1st-pass-out.fasta /
+-db /data/blast-nt-db/nt /
+-num_threads 15 /
+-max_target_seqs 10 /
+-outfmt '6 sscinames std'/
+-out /data/SPAdes-contigs/uniq_contigs_SPAdes_2nd-pass-nt-out.txt &
+
+   #4 get Borrelia hits in .fasta format for annotation
+
+grep "^Bor" uniq_contigs_SPAdes_2nd-pass-nt-out.txt | awk -F"\t" '{print $2}' > uniq_contigs_SPAdes_2nd-pass-nt-seqIDs.txt
+
+usearch9.2 -fastx_getseqs uniq_contigs_SPAdes.fasta /
+-labels uniq_contigs_SPAdes_2nd-pass-nt-seqIDs.txt /
+-fastaout uniq_contigs_SPAdes_2nd-pass-nt-out.fasta
